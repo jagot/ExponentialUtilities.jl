@@ -24,32 +24,32 @@ Resize `Ks` to a different `maxiter`, destroying its contents.
 This is an expensive operation and should be used scarcely.
 """
 mutable struct KrylovSubspace{B, T, U}
-  m::Int        # subspace dimension
-  maxiter::Int  # maximum allowed subspace size
-  beta::B       # norm(b,2)
-  V::Matrix{T}  # orthonormal bases
-  H::Matrix{U}  # Gram-Schmidt coefficients (real for Hermitian matrices)
-  KrylovSubspace{T,U}(n::Integer, maxiter::Integer=30) where {T,U} = new{real(T), T, U}(
-      maxiter, maxiter, zero(real(T)), Matrix{T}(undef, n, maxiter + 1),
-      fill(zero(U), maxiter + 1, maxiter))
-  KrylovSubspace{T}(n::Integer, maxiter::Integer=30) where {T} = KrylovSubspace{T,T}(n, maxiter)
+    m::Int        # subspace dimension
+    maxiter::Int  # maximum allowed subspace size
+    beta::B       # norm(b,2)
+    V::Matrix{T}  # orthonormal bases
+    H::Matrix{U}  # Gram-Schmidt coefficients (real for Hermitian matrices)
+    KrylovSubspace{T,U}(n::Integer, maxiter::Integer=30) where {T,U} = new{real(T), T, U}(
+        maxiter, maxiter, zero(real(T)), Matrix{T}(undef, n, maxiter + 1),
+        fill(zero(U), maxiter + 1, maxiter))
+    KrylovSubspace{T}(n::Integer, maxiter::Integer=30) where {T} = KrylovSubspace{T,T}(n, maxiter)
 end
 getH(Ks::KrylovSubspace) = @view(Ks.H[1:Ks.m + 1, 1:Ks.m])
 getV(Ks::KrylovSubspace) = @view(Ks.V[:, 1:Ks.m + 1])
 function Base.resize!(Ks::KrylovSubspace{B,T}, maxiter::Integer) where {B,T}
-  V = Matrix{T}(undef, size(Ks.V, 1), maxiter + 1)
-  H = fill(zero(T), maxiter + 1, maxiter)
-  Ks.V = V; Ks.H = H
-  Ks.m = Ks.maxiter = maxiter
-  return Ks
+    V = Matrix{T}(undef, size(Ks.V, 1), maxiter + 1)
+    H = fill(zero(T), maxiter + 1, maxiter)
+    Ks.V = V; Ks.H = H
+    Ks.m = Ks.maxiter = maxiter
+    return Ks
 end
 function Base.show(io::IO, Ks::KrylovSubspace)
-  println(io, "$(Ks.m)-dimensional Krylov subspace with fields")
-  println(io, "beta: $(Ks.beta)")
-  print(io, "V: ")
-  println(IOContext(io, :limit => true), getV(Ks))
-  print(io, "H: ")
-  println(IOContext(io, :limit => true), getH(Ks))
+    println(io, "$(Ks.m)-dimensional Krylov subspace with fields")
+    println(io, "beta: $(Ks.beta)")
+    print(io, "V: ")
+    println(IOContext(io, :limit => true), getV(Ks))
+    print(io, "H: ")
+    println(IOContext(io, :limit => true), getH(Ks))
 end
 
 coeff(::Type{T},α::T) where {T} = α
@@ -84,9 +84,9 @@ Numerical Mathematics and Advanced Applications-ENUMATH 2013 (pp. 345-353).
 Springer, Cham.
 """
 function arnoldi(A, b; m=min(30, size(A, 1)), tol=1e-7, opnorm=LinearAlgebra.opnorm,
-  iop=0, cache=nothing)
-  Ks = KrylovSubspace{eltype(b)}(length(b), m)
-  arnoldi!(Ks, A, b; m=m, tol=tol, opnorm=opnorm, cache=cache, iop=iop)
+                 iop=0, cache=nothing)
+    Ks = KrylovSubspace{eltype(b)}(length(b), m)
+    arnoldi!(Ks, A, b; m=m, tol=tol, opnorm=opnorm, cache=cache, iop=iop)
 end
 """
     arnoldi!(Ks,A,b[;tol,m,opnorm,iop,cache]) -> Ks
@@ -97,49 +97,49 @@ function arnoldi!(Ks::KrylovSubspace{B, T, U}, A, b::AbstractVector{T};
                   tol::Real=1e-7, m::Int=min(Ks.maxiter, size(A, 1)),
                   opnorm=LinearAlgebra.opnorm,
                   iop::Int=0, cache=nothing) where {B, T <: Number, U}
-  if ishermitian(A)
-    return lanczos!(Ks, A, b; tol=tol, m=m, opnorm=opnorm, cache=cache)
-  end
-  if m > Ks.maxiter
-    resize!(Ks, m)
-  else
-    Ks.m = m # might change if happy-breakdown occurs
-  end
-  V, H = getV(Ks), getH(Ks)
-  vtol = tol * opnorm(A, Inf)
-  if iop == 0
-    iop = m
-  end
-  # Safe checks
-  n = size(V, 1)
-  @assert length(b) == size(A,1) == size(A,2) == n "Dimension mismatch"
-  if cache == nothing
-    cache = similar(b)
-  else
-    @assert size(cache) == (n,) "Dimension mismatch"
-  end
-  # Arnoldi iterations (with IOP)
-  fill!(H, zero(U))
-  Ks.beta = norm(b)
-  @. V[:, 1] = b / Ks.beta
-  @inbounds for j = 1:m
-    mul!(cache, A, @view(V[:, j]))
-    @inbounds for i = max(1, j - iop + 1):j
-      alpha = coeff(U, dot(@view(V[:, i]), cache))
-      H[i, j] = alpha
-      axpy!(-alpha, @view(V[:, i]), cache)
+    if ishermitian(A)
+        return lanczos!(Ks, A, b; tol=tol, m=m, opnorm=opnorm, cache=cache)
     end
-    beta = norm(cache)
-    H[j+1, j] = beta
-    @inbounds for i = 1:n
-      V[i, j+1] = cache[i] / beta
+    if m > Ks.maxiter
+        resize!(Ks, m)
+    else
+        Ks.m = m # might change if happy-breakdown occurs
     end
-    if beta < vtol # happy-breakdown
-      Ks.m = j
-      break
+    V, H = getV(Ks), getH(Ks)
+    vtol = tol * opnorm(A, Inf)
+    if iop == 0
+        iop = m
     end
-  end
-  return Ks
+    # Safe checks
+    n = size(V, 1)
+    @assert length(b) == size(A,1) == size(A,2) == n "Dimension mismatch"
+    if cache == nothing
+        cache = similar(b)
+    else
+        @assert size(cache) == (n,) "Dimension mismatch"
+    end
+    # Arnoldi iterations (with IOP)
+    fill!(H, zero(U))
+    Ks.beta = norm(b)
+    @. V[:, 1] = b / Ks.beta
+    @inbounds for j = 1:m
+        mul!(cache, A, @view(V[:, j]))
+        @inbounds for i = max(1, j - iop + 1):j
+            alpha = coeff(U, dot(@view(V[:, i]), cache))
+            H[i, j] = alpha
+            axpy!(-alpha, @view(V[:, i]), cache)
+        end
+        beta = norm(cache)
+        H[j+1, j] = beta
+        @inbounds for i = 1:n
+            V[i, j+1] = cache[i] / beta
+        end
+        if beta < vtol # happy-breakdown
+            Ks.m = j
+            break
+        end
+    end
+    return Ks
 end
 """
     lanczos!(Ks,A,b[;tol,m,opnorm,cache]) -> Ks
@@ -151,46 +151,46 @@ function lanczos!(Ks::KrylovSubspace{B, T, U}, A, b::AbstractVector{T};
                   tol=1e-7, m=min(Ks.maxiter, size(A, 1)),
                   opnorm=LinearAlgebra.opnorm,
                   cache=nothing) where {B, T <: Number, U}
-  if m > Ks.maxiter
-    resize!(Ks, m)
-  else
-    Ks.m = m # might change if happy-breakdown occurs
-  end
-  V, H = getV(Ks), getH(Ks)
-  vtol = tol * opnorm(A, Inf)
-  # Safe checks
-  n = size(V, 1)
-  @assert length(b) == size(A,1) == size(A,2) == n "Dimension mismatch"
-  if cache == nothing
-    cache = similar(b)
-  else
-    @assert size(cache) == (n,) "Dimension mismatch"
-  end
-  # Lanczos iterations
-  fill!(H, zero(T))
-  Ks.beta = norm(b)
-  @. V[:, 1] = b / Ks.beta
-  @inbounds for j = 1:m
-    vj = @view(V[:, j])
-    mul!(cache, A, vj)
-    alpha = coeff(U, dot(vj, cache))
-    H[j, j] = alpha
-    axpy!(-alpha, vj, cache)
-    if j > 1
-      axpy!(-H[j-1, j], @view(V[:, j-1]), cache)
+    if m > Ks.maxiter
+        resize!(Ks, m)
+    else
+        Ks.m = m # might change if happy-breakdown occurs
     end
-    beta = norm(cache)
-    H[j+1, j] = beta
-    if j < m
-      H[j, j+1] = beta
+    V, H = getV(Ks), getH(Ks)
+    vtol = tol * opnorm(A, Inf)
+    # Safe checks
+    n = size(V, 1)
+    @assert length(b) == size(A,1) == size(A,2) == n "Dimension mismatch"
+    if cache == nothing
+        cache = similar(b)
+    else
+        @assert size(cache) == (n,) "Dimension mismatch"
     end
-    @inbounds for i = 1:n
-      V[i, j+1] = cache[i] / beta
+    # Lanczos iterations
+    fill!(H, zero(T))
+    Ks.beta = norm(b)
+    @. V[:, 1] = b / Ks.beta
+    @inbounds for j = 1:m
+        vj = @view(V[:, j])
+        mul!(cache, A, vj)
+        alpha = coeff(U, dot(vj, cache))
+        H[j, j] = alpha
+        axpy!(-alpha, vj, cache)
+        if j > 1
+            axpy!(-H[j-1, j], @view(V[:, j-1]), cache)
+        end
+        beta = norm(cache)
+        H[j+1, j] = beta
+        if j < m
+            H[j, j+1] = beta
+        end
+        @inbounds for i = 1:n
+            V[i, j+1] = cache[i] / beta
+        end
+        if beta < vtol # happy-breakdown
+            Ks.m = j
+            break
+        end
     end
-    if beta < vtol # happy-breakdown
-      Ks.m = j
-      break
-    end
-  end
-  return Ks
+    return Ks
 end
