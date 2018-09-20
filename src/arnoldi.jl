@@ -36,9 +36,9 @@ mutable struct KrylovSubspace{B, T, U}
 end
 getH(Ks::KrylovSubspace) = @view(Ks.H[1:Ks.m + 1, 1:Ks.m])
 getV(Ks::KrylovSubspace) = @view(Ks.V[:, 1:Ks.m + 1])
-function Base.resize!(Ks::KrylovSubspace{B,T}, maxiter::Integer) where {B,T}
+function Base.resize!(Ks::KrylovSubspace{B,T,U}, maxiter::Integer) where {B,T,U}
     V = Matrix{T}(undef, size(Ks.V, 1), maxiter + 1)
-    H = fill(zero(T), maxiter + 1, maxiter)
+    H = fill(zero(U), maxiter + 1, maxiter)
     Ks.V = V; Ks.H = H
     Ks.m = Ks.maxiter = maxiter
     return Ks
@@ -96,7 +96,7 @@ Non-allocating version of `arnoldi`.
 function arnoldi!(Ks::KrylovSubspace{B, T, U}, A, b::AbstractVector{T};
                   tol::Real=1e-7, m::Int=min(Ks.maxiter, size(A, 1)),
                   opnorm=LinearAlgebra.opnorm,
-                  iop::Int=0, cache=nothing) where {B, T <: Number, U}
+                  iop::Int=0, cache=nothing) where {B, T <: Number, U <: Number}
     if ishermitian(A)
         return lanczos!(Ks, A, b; tol=tol, m=m, opnorm=opnorm, cache=cache)
     end
@@ -150,7 +150,7 @@ Hermitian matrices.
 function lanczos!(Ks::KrylovSubspace{B, T, U}, A, b::AbstractVector{T};
                   tol=1e-7, m=min(Ks.maxiter, size(A, 1)),
                   opnorm=LinearAlgebra.opnorm,
-                  cache=nothing) where {B, T <: Number, U}
+                  cache=nothing) where {B, T <: Number, U <: Number}
     if m > Ks.maxiter
         resize!(Ks, m)
     else
